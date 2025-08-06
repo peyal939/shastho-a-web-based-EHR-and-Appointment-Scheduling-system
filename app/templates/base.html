@@ -1,0 +1,338 @@
+<!--
+Base template for the Shastho Flask application.
+-----------------------------------------------
+Defines the main HTML structure, including header, footer, and blocks for child templates to extend.
+All other templates inherit from this file.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}Shastho - Healthcare Management System{% endblock %}
+    </title>
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+
+    <!-- Tailwind CSS CDN (for development) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Configure Tailwind with our design tokens -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#0891b2" /* cyan-600 */,
+              "primary-hover": "#0e7490" /* cyan-700 */,
+              "primary-light": "#ecfeff" /* cyan-50 */,
+              success: "#10b981" /* green-500 */,
+              warning: "#f59e0b" /* amber-500 */,
+              error: "#ef4444" /* red-500 */,
+              info: "#3b82f6" /* blue-500 */,
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Additional CSS -->
+    {% block extra_css %}{% endblock %}
+
+    <!-- Additional head content -->
+    {% block head_extra %}{% endblock %}
+  </head>
+  <body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Header / Navigation -->
+    <header class="bg-white shadow-sm">
+      <nav
+        class="container mx-auto px-4 py-4 flex items-center justify-between"
+      >
+        <!-- Logo section -->
+        <div class="flex items-center">
+          <a href="/" class="flex items-center">
+            <img
+              src="{{ url_for('static', filename='images/logo.svg') }}"
+              alt="shastho Logo"
+              class="h-8 w-8 mr-2"
+            />
+            <span class="font-bold text-2xl text-cyan-600">shastho</span>
+          </a>
+        </div>
+
+        <!-- Main Nav Links - center -->
+        <div class="hidden md:flex items-center justify-center space-x-8">
+          {% if not session.get('user_id') %}
+          <a
+            href="{{ url_for('main.index') }}"
+            class="font-medium text-gray-700 hover:text-cyan-600"
+            >{{ 'Home'|t }}</a
+          >
+          {% endif %}
+        </div>
+
+        <!-- Mobile menu button -->
+        <div class="md:hidden">
+          <button id="mobile-menu-toggle" class="focus:outline-none">
+            <i data-lucide="menu" class="h-6 w-6 text-gray-700"></i>
+          </button>
+        </div>
+
+        <!-- Auth buttons -->
+        <div class="hidden md:flex items-center space-x-4">
+          {% if session.get('user_id') %}
+          <div class="flex items-center space-x-4">
+            <span class="text-gray-700">
+              {{ 'Welcome'|t }}, {{ session.get('user_name',
+              session.get('user_email')) }}
+            </span>
+            <div class="relative" id="userMenuDropdown">
+              <button
+                class="flex items-center text-gray-700 focus:outline-none"
+                id="userMenuButton"
+              >
+                {% if session.get('profile_picture_url') %}
+                <img
+                  src="{{ session.get('profile_picture_url') }}"
+                  alt="Profile"
+                  class="h-8 w-8 rounded-full object-cover"
+                />
+                {% else %}
+                <i data-lucide="user-circle" class="h-8 w-8 text-cyan-600"></i>
+                {% endif %}
+                <i data-lucide="chevron-down" class="h-4 w-4 ml-1"></i>
+              </button>
+              <div
+                class="absolute right-0 mt-2 py-2 w-48 bg-white rounded-md shadow-lg hidden z-50"
+                id="userMenu"
+              >
+                <a
+                  href="{{ url_for('auth.profile') }}"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  <i data-lucide="user" class="h-4 w-4 inline mr-1"></i> Profile
+                </a>
+                {% if session.get('user_role') == 'admin' %}
+                <a
+                  href="{{ url_for('admin.dashboard') }}"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  <i data-lucide="settings" class="h-4 w-4 inline mr-1"></i>
+                  Admin Portal
+                </a>
+                {% endif %}
+                <div class="border-t border-gray-100"></div>
+                <a
+                  href="{{ url_for('auth.logout') }}"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  <i data-lucide="log-out" class="h-4 w-4 inline mr-1"></i>
+                  Logout
+                </a>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <a
+            href="{{ url_for('auth.login') }}"
+            class="border border-cyan-600 text-cyan-600 hover:bg-cyan-50 px-4 py-2 rounded-lg font-medium transition duration-150"
+            >{{ 'Login'|t }}</a
+          >
+          <a
+            href="{{ url_for('auth.register') }}"
+            class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg font-medium transition duration-150"
+            >{{ 'Register'|t }}</a
+          >
+          {% endif %}
+        </div>
+      </nav>
+
+      <!-- Mobile Menu (hidden by default) -->
+      <div id="mobile-menu" class="hidden md:hidden px-4 pb-4">
+        <div class="flex flex-col space-y-2">
+          {% if not session.get('user_id') %}
+          <a
+            href="{{ url_for('main.index') }}"
+            class="font-medium text-gray-700 hover:text-cyan-600 py-2"
+            >{{ 'Home'|t }}</a
+          >
+          {% endif %} {% if session.get('user_id') %}
+          <div class="flex items-center pt-2">
+            {% if session.get('profile_picture_url') %}
+            <img
+              src="{{ session.get('profile_picture_url') }}"
+              alt="Profile"
+              class="h-8 w-8 rounded-full object-cover mr-2"
+            />
+            {% else %}
+            <i data-lucide="user-circle" class="h-8 w-8 text-cyan-600 mr-2"></i>
+            {% endif %}
+            <span
+              >{{ session.get('user_name', session.get('user_email')) }}</span
+            >
+          </div>
+          <a
+            href="{{ url_for('auth.profile') }}"
+            class="font-medium text-gray-700 hover:text-cyan-600 py-1 ml-6"
+          >
+            <i data-lucide="user" class="h-4 w-4 inline mr-1"></i> Profile
+          </a>
+          {% if session.get('user_role') == 'admin' %}
+          <a
+            href="{{ url_for('admin.dashboard') }}"
+            class="font-medium text-gray-700 hover:text-cyan-600 py-1 ml-6"
+          >
+            <i data-lucide="settings" class="h-4 w-4 inline mr-1"></i> Admin
+            Portal
+          </a>
+          {% endif %}
+          <a
+            href="{{ url_for('auth.logout') }}"
+            class="font-medium text-gray-700 hover:text-cyan-600 py-1 ml-6"
+          >
+            <i data-lucide="log-out" class="h-4 w-4 inline mr-1"></i> Logout
+          </a>
+          {% else %}
+          <div class="flex space-x-2 pt-2">
+            <a
+              href="{{ url_for('auth.login') }}"
+              class="border border-cyan-600 text-cyan-600 hover:bg-cyan-50 px-4 py-2 rounded-lg font-medium transition duration-150 flex-1 text-center"
+              >{{ 'Login'|t }}</a
+            >
+            <a
+              href="{{ url_for('auth.register') }}"
+              class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg font-medium transition duration-150 flex-1 text-center"
+              >{{ 'Register'|t }}</a
+            >
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <!-- Flash Messages -->
+    <div class="container mx-auto px-4 mt-4">
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div
+        class="mb-4 {% if category == 'error' %}bg-red-100 text-red-700 border-red-400{% elif category == 'success' %}bg-green-100 text-green-700 border-green-400{% else %}bg-blue-100 text-blue-700 border-blue-400{% endif %} border-l-4 p-4 rounded"
+      >
+        <div class="flex">
+          <div class="flex-shrink-0">
+            {% if category == 'error' %}
+            <i data-lucide="alert-circle" class="h-5 w-5 text-red-400"></i>
+            {% elif category == 'success' %}
+            <i data-lucide="check-circle" class="h-5 w-5 text-green-400"></i>
+            {% else %}
+            <i data-lucide="info" class="h-5 w-5 text-blue-400"></i>
+            {% endif %}
+          </div>
+          <div class="ml-3">
+            <p class="text-sm">{{ message }}</p>
+          </div>
+        </div>
+      </div>
+      {% endfor %} {% endif %} {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-grow">{% block content %}{% endblock %}</div>
+
+    <!-- Footer -->
+    {% if hide_footer is not defined or not hide_footer %}
+    <footer class="bg-gray-800 text-white py-8 mt-auto">
+      <div class="container mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div>
+            <h3 class="text-lg font-semibold mb-4">shastho</h3>
+            <p class="text-gray-300 text-sm">
+              Making healthcare accessible for everyone.
+            </p>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
+            <ul class="space-y-2 text-gray-300 text-sm">
+              <li><a href="#" class="hover:text-white">About Us</a></li>
+              <li><a href="#" class="hover:text-white">Services</a></li>
+              <li><a href="#" class="hover:text-white">Doctors</a></li>
+              <li><a href="#" class="hover:text-white">Contact</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold mb-4">Legal</h3>
+            <ul class="space-y-2 text-gray-300 text-sm">
+              <li><a href="#" class="hover:text-white">Terms of Service</a></li>
+              <li><a href="#" class="hover:text-white">Privacy Policy</a></li>
+              <li>
+                <a href="#" class="hover:text-white">Cookie Policy</a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold mb-4">Connect</h3>
+            <div class="flex space-x-4">
+              <a href="#" class="text-gray-300 hover:text-white">
+                <i data-lucide="facebook" class="h-5 w-5"></i>
+              </a>
+              <a href="#" class="text-gray-300 hover:text-white">
+                <i data-lucide="twitter" class="h-5 w-5"></i>
+              </a>
+              <a href="#" class="text-gray-300 hover:text-white">
+                <i data-lucide="instagram" class="h-5 w-5"></i>
+              </a>
+              <a href="#" class="text-gray-300 hover:text-white">
+                <i data-lucide="linkedin" class="h-5 w-5"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="border-t border-gray-700 mt-8 pt-8 text-sm text-gray-300">
+          <p>&copy; 2023 shastho. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+    {% endif %}
+
+    <!-- Lucide Icons (Just the ones we need) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      lucide.createIcons();
+    </script>
+
+    <!-- User Menu Toggle -->
+    <script>
+      // For desktop dropdown
+      document.addEventListener("DOMContentLoaded", function () {
+        const userMenuButton = document.getElementById("userMenuButton");
+        const userMenu = document.getElementById("userMenu");
+        const userMenuDropdown = document.getElementById("userMenuDropdown");
+
+        if (userMenuButton && userMenu) {
+          userMenuButton.addEventListener("click", function () {
+            userMenu.classList.toggle("hidden");
+          });
+
+          // Close the dropdown when clicking outside
+          document.addEventListener("click", function (event) {
+            if (userMenuDropdown && !userMenuDropdown.contains(event.target)) {
+              userMenu.classList.add("hidden");
+            }
+          });
+        }
+
+        // Mobile menu toggle
+        const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
+        const mobileMenu = document.getElementById("mobile-menu");
+
+        if (mobileMenuToggle && mobileMenu) {
+          mobileMenuToggle.addEventListener("click", function () {
+            mobileMenu.classList.toggle("hidden");
+          });
+        }
+      });
+    </script>
+
+    <!-- Additional JavaScript -->
+    {% block extra_js %}{% endblock %} {% block scripts %}{% endblock %}
+  </body>
+</html>

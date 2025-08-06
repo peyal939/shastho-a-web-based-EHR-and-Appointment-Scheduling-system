@@ -1,0 +1,181 @@
+{% extends "admin/layout.html" %} {% from "admin/components/flash_messages.html"
+import flash_messages %} {% from "admin/components/search_bar.html" import
+search_bar %} {% from "admin/components/confirm_modal.html" import confirm_modal
+%} {% block title %}Departments - Admin Portal - Shastho{% endblock %} {% block
+page_title %}Departments{% endblock %} {% block breadcrumb %}
+<span class="text-gray-700">Departments</span>
+{% endblock %} {% block admin_content %}
+<div class="mt-4">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-lg font-medium text-gray-900">Department Management</h2>
+  </div>
+
+  <!-- Search and Filter Bar -->
+  {% set filter_options = [] %} {% for hospital in hospitals %} {% set
+  filter_options = filter_options + [(hospital.id|string, hospital.name)] %} {%
+  endfor %} {{ search_bar('departments', search_query, filter_options,
+  'hospital_id', hospital_id) }}
+
+  <!-- Flash Messages -->
+  {{ flash_messages() }}
+
+  <!-- Departments Table -->
+  <div class="mt-6 bg-white shadow overflow-hidden sm:rounded-md">
+    <ul class="divide-y divide-gray-200">
+      {% for dept_data in departments %} {% set dept = dept_data.department %}
+      <li class="px-4 py-4 sm:px-6">
+        <div class="flex items-center justify-between">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-indigo-600 truncate">
+              {{ dept.name }}
+            </p>
+
+            <!-- Hospitals using this department -->
+            {% if dept_data.hospitals %}
+            <div class="mt-2">
+              <p class="text-xs text-gray-500 mb-1">Used in Hospitals:</p>
+              <div class="flex flex-wrap gap-2">
+                {% for hospital in dept_data.hospitals %}
+                <div
+                  class="flex items-center bg-gray-100 rounded-full px-3 py-1"
+                >
+                  <span class="text-xs font-medium text-gray-800"
+                    >{{ hospital.name }}</span
+                  >
+                  <form
+                    action="{{ url_for('admin.delete_hospital_department', hospital_department_id=hospital.rel_id) }}"
+                    method="POST"
+                    class="delete-form ml-2"
+                    data-confirm="Are you sure you want to remove this department from this hospital?"
+                  >
+                    <button
+                      type="submit"
+                      class="text-red-600 hover:text-red-800"
+                      aria-label="Remove from hospital"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-3 w-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </form>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% else %}
+            <p class="mt-1 text-xs text-gray-500">
+              Not assigned to any hospitals
+            </p>
+            {% endif %}
+          </div>
+        </div>
+      </li>
+      {% else %}
+      <li class="px-4 py-4 sm:px-6 text-center">
+        <p class="text-gray-500">No departments found.</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+{{ confirm_modal() }}
+
+<!-- JavaScript for handling delete confirmations -->
+<script>
+  // Handle form submission for department relationship deletion
+  document.addEventListener("DOMContentLoaded", function () {
+    // Get all delete forms
+    const deleteForms = document.querySelectorAll(".delete-form");
+
+    // Add event listeners to each form
+    deleteForms.forEach((form) => {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        // Get the CSRF token
+        const csrfToken = document
+          .querySelector("meta[name='csrf-token']")
+          .getAttribute("content");
+
+        // Get the hospital chip element for removal on success
+        const hospitalChip = this.closest(".bg-gray-100");
+
+        // Send AJAX request
+        fetch(this.action, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken,
+          },
+        })
+          .then((response) => {
+            // Check if response is OK
+            if (!response.ok) {
+              throw new Error(
+                `Server returned ${response.status}: ${response.statusText}`
+              );
+            }
+            return response.json();
+          })
+          .then((data) => {
+            console.log("Success:", data);
+
+            // If successful, remove the hospital chip from the UI
+            if (data.success && hospitalChip) {
+              hospitalChip.remove();
+
+              // Show a temporary success message
+              const messageDiv = document.createElement("div");
+              messageDiv.className =
+                "fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded";
+              messageDiv.setAttribute("role", "alert");
+              messageDiv.innerHTML = `
+              <span class="block sm:inline">${data.message}</span>
+            `;
+
+              document.body.appendChild(messageDiv);
+
+              // Remove the message after 3 seconds
+              setTimeout(() => {
+                messageDiv.remove();
+              }, 3000);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+
+            // Show an error message
+            const messageDiv = document.createElement("div");
+            messageDiv.className =
+              "fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded";
+            messageDiv.setAttribute("role", "alert");
+            messageDiv.innerHTML = `
+            <span class="block sm:inline">Error: ${error.message}</span>
+          `;
+
+            document.body.appendChild(messageDiv);
+
+            // Remove the message after 3 seconds
+            setTimeout(() => {
+              messageDiv.remove();
+            }, 3000);
+          });
+      });
+    });
+  });
+</script>
+{% endblock %}

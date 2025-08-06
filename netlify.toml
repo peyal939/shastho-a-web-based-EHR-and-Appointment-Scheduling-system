@@ -1,0 +1,11 @@
+[build]
+  command = "pip install --upgrade pip && pip install -r requirements.txt"
+  publish = "."
+
+[build.environment]
+  PYTHON_VERSION = "3.10.17"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/api"
+  status = 200
